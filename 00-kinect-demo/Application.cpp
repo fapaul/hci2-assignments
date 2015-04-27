@@ -60,9 +60,9 @@ void Application::loop()
 
 void Application::makeScreenshots()
 {
-	cv::imwrite("color.png", m_bgrImage);
-	cv::imwrite("depth.png", m_depthImage);
-	cv::imwrite("output.png", m_outputImage);
+	cv::imwrite("screenshots/color.png", m_bgrImage);
+	cv::imwrite("screenshots/depth.png", m_depthImage);
+	cv::imwrite("screenshots/output.png", m_outputImage);
 }
 
 Application::Application()
