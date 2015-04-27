@@ -18,23 +18,38 @@
 #include "framework/DepthCamera.h"
 #include "framework/KinectMotor.h"
 
-void Application::processFrame()
-{	
-	///////////////////////////////////////////////////////////////////////////
-	//
-	// To do:
-	//
-	// This method will be called every frame of the camera. Insert code here in
-	// order to fulfill the assignment. These images will help you doing so:
-	//
-	// * m_bgrImage: The image of the Kinect's color camera
-	// * m_depthImage: The image of the Kinects's depth sensor
-	// * m_outputImage: The image in which you can draw the touch circles.
-	//
-	///////////////////////////////////////////////////////////////////////////
+#define INVERT(x) (cv::Scalar::all(255) - (x))
 
-	// Sample code brightening up the depth image to make the values visible
-	m_depthImage *= 10;
+#define BRIGHTEN_FACTOR 10
+bool output = false;
+
+void Application::processFrame()
+{
+	// Bei erstem Bild kalibrieren
+	if (!m_bBackgroundInitialized) {
+		m_backgroundImage = m_depthImage.clone() * BRIGHTEN_FACTOR;
+		m_bBackgroundInitialized = true;
+	}
+
+	// Bild aufhellen
+	m_depthImage *= BRIGHTEN_FACTOR;
+
+	// Hintergrund abziehen
+	m_outputImage = INVERT(m_depthImage - m_backgroundImage);
+
+	m_outputImage.convertTo(m_outputImage, CV_32FC1);
+
+	if (output)
+		cv::imwrite("screenshots/output1.png", m_outputImage);
+	cv::threshold(m_outputImage, m_outputImage, 3, 255, cv::THRESH_TOZERO_INV);
+	if (output)
+		cv::imwrite("screenshots/output2.png", m_outputImage);
+	cv::blur(m_outputImage, m_outputImage, cv::Size(12, 12));
+	if (output)
+		cv::imwrite("screenshots/output3.png", m_outputImage);
+	cv::threshold(m_outputImage, m_outputImage, 2, 255, cv::THRESH_BINARY);
+	if (output)
+		cv::imwrite("screenshots/output4.png", m_outputImage);
 }
 
 void Application::loop()
@@ -49,6 +64,7 @@ void Application::loop()
 		makeScreenshots();
 		break;
 	}
+	output = (key == 's');
 
 	m_depthCamera->getFrame(m_bgrImage, m_depthImage);
 	processFrame();
@@ -84,6 +100,7 @@ Application::Application()
 	m_bgrImage = cv::Mat(480, 640, CV_8UC3);
 	m_depthImage = cv::Mat(480, 640, CV_16UC1);
 	m_outputImage = cv::Mat(480, 640, CV_8UC1);
+	m_bBackgroundInitialized = false;
 }
 
 Application::~Application()

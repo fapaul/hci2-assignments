@@ -27,6 +27,9 @@ protected:
 	cv::Mat m_bgrImage;
 	cv::Mat m_depthImage;
 	cv::Mat m_outputImage;
+	cv::Mat m_backgroundImage;
+
+	bool m_bBackgroundInitialized;
 
 	bool m_isFinished;
 };

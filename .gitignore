@@ -46,7 +46,7 @@ bld/
 *.app
 
 # Screenshots
-screenshots/*
+screenshots/
 
 # Kram
 Thumbs.db
