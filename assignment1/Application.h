@@ -28,6 +28,7 @@ protected:
 	cv::Mat m_depthImage;
 	cv::Mat m_outputImage;
 	cv::Mat m_backgroundImage;
+	cv::Mat m_resultImage;
 
 	bool m_bBackgroundInitialized;
 
