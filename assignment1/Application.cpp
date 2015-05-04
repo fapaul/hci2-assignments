@@ -8,6 +8,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////
 
+#pragma warning( disable : 4018 )
+
 #include "Application.h"
 
 #include <iostream>
@@ -44,7 +46,7 @@ void Application::processFrame()
 
 	// MAGIC
 	cv::threshold(imageBase, imageBase, 7, 255, cv::THRESH_TOZERO_INV);
-	cv::threshold(imageBase, imageBase, 2, 255, cv::THRESH_BINARY);
+	cv::threshold(imageBase, imageBase, 5, 255, cv::THRESH_BINARY);
 
 	cv::blur(imageBase, imageBase, cv::Size(7, 7));
 
@@ -117,8 +119,8 @@ void Application::loop()
 	processFrame();
 
 	cv::imshow("bgr", m_bgrImage);
-	cv::imshow("depth", m_depthImage);
-	cv::imshow("output", m_outputImage);
+	//cv::imshow("depth", m_depthImage);
+	//cv::imshow("output", m_outputImage);
 	cv::imshow("result", m_resultImage);
 }
 
