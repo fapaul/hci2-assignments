@@ -11,6 +11,7 @@
 #pragma warning( disable : 4018 )
 
 #include "Application.h"
+#include "DataSet.h"
 
 #include <iostream>
 
@@ -25,8 +26,15 @@
 #define BRIGHTEN_FACTOR 10
 bool output = false;
 
+cv::Mat data;
+cv::Mat label;
+
+
+cv::vector<cv::Point> dataPoints;
 void Application::processFrame()
 {
+
+
 	cv::Mat imageBase;
 	cv::Mat imageRanged;
 
@@ -94,10 +102,17 @@ void Application::processFrame()
 		cv::minEnclosingCircle(contour, middle, radius);
 
 		// Kreis zeichnen
+		dataPoints.push_back(middle);
 		cv::circle(m_resultImage, middle, 20, cv::Scalar(255, 255, 255), -1);
 	}
 
 	// Bild ausgeben
+	if (output){
+		dataPoints = cv::vector<cv::Point>();
+		m_resultSignImage = final.clone();
+		return;
+	}
+
 	m_outputImage = final.clone();
 }
 
@@ -107,21 +122,25 @@ void Application::loop()
 	switch (key)
 	{
 	case 'q': // quit
-		m_isFinished = true;
-		break;
+	m_isFinished = true;
+	break;
 	case 's': // screenshot
-		makeScreenshots();
-		break;
-	}
-	output = (key == 's');
+	makeScreenshots();
+	break;
+	case 'h': //enter handwrite sign
+	output = true;
+	break;
+}
+output = (key == 'h');
 
-	m_depthCamera->getFrame(m_bgrImage, m_depthImage);
-	processFrame();
+m_depthCamera->getFrame(m_bgrImage, m_depthImage);
+processFrame();
 
-	cv::imshow("bgr", m_bgrImage);
+cv::imshow("bgr", m_bgrImage);
 	//cv::imshow("depth", m_depthImage);
 	//cv::imshow("output", m_outputImage);
-	cv::imshow("result", m_resultImage);
+cv::imshow("result", m_resultImage);
+cv::imshow("handwrite", m_resultSignImage);
 }
 
 void Application::makeScreenshots()
@@ -132,13 +151,13 @@ void Application::makeScreenshots()
 }
 
 Application::Application()
-	: m_isFinished(false)
-	, m_depthCamera(nullptr)
-	, m_kinectMotor(nullptr)
+: m_isFinished(false)
+, m_depthCamera(nullptr)
+, m_kinectMotor(nullptr)
 {
 	// If you want to control the motor / LED
 	// m_kinectMotor = new KinectMotor;
-
+	readDataSet("pedigits.tra", 3000, data, label);
 	m_depthCamera = new DepthCamera;
 
 	// open windows
@@ -153,6 +172,7 @@ Application::Application()
 	m_outputImage = cv::Mat(480, 640, CV_8UC1);
 	m_resultImage = cv::Mat(480, 640, CV_8UC1);
 	m_bBackgroundInitialized = false;
+	m_resultSignImage = cv::Mat(480, 640, CV_8UC1);
 }
 
 Application::~Application()
@@ -164,4 +184,14 @@ Application::~Application()
 bool Application::isFinished()
 {
 	return m_isFinished;
+}
+
+void Application::evaluateData(){
+	cv::Point current = dataPoints[0];
+	int vectorLength;
+
+	for (int i = 1; i < signLength; i++){
+
+	}
+
 }

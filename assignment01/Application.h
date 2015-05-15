@@ -29,6 +29,7 @@ protected:
 	cv::Mat m_outputImage;
 	cv::Mat m_backgroundImage;
 	cv::Mat m_resultImage;
+	cv::Mat m_resultSignImage;
 
 	bool m_bBackgroundInitialized;
 
