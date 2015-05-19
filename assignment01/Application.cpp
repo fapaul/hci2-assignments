@@ -12,6 +12,7 @@
 
 #include "Application.h"
 #include "DataSet.h"
+#include "util.h"
 
 #include <iostream>
 
@@ -29,6 +30,7 @@ bool output = false;
 cv::Mat data;
 cv::Mat label;
 
+using namespace std;
 
 cv::vector<cv::Point> dataPoints;
 void Application::processFrame()
@@ -108,6 +110,8 @@ void Application::processFrame()
 
 	// Bild ausgeben
 	if (output){
+		evaluateData();
+
 		dataPoints = cv::vector<cv::Point>();
 		m_resultSignImage = final.clone();
 		return;
@@ -157,7 +161,7 @@ Application::Application()
 {
 	// If you want to control the motor / LED
 	// m_kinectMotor = new KinectMotor;
-	readDataSet("pedigits.tra", 3000, data, label);
+	readDataSet("pendigits.tra", 3000, data, label);
 	m_depthCamera = new DepthCamera;
 
 	// open windows
@@ -186,12 +190,85 @@ bool Application::isFinished()
 	return m_isFinished;
 }
 
+class extrema {
+public:
+	double minX;
+	double minY;
+	double maxX;
+	double maxY;
+
+	extrema(cv::Point p) {
+		minX = maxX = p.x;
+		minY = maxY = p.y;
+	}
+};
+
 void Application::evaluateData(){
+	// Test dataset
+	dataPoints = cv::vector<cv::Point>();
+	dataPoints.push_back(cv::Point(145, 135));
+	dataPoints.push_back(cv::Point(254, 87));
+	dataPoints.push_back(cv::Point(390, 86));
+	dataPoints.push_back(cv::Point(474, 201));
+	dataPoints.push_back(cv::Point(236, 363));
+	dataPoints.push_back(cv::Point(491, 379));
+
+	// calculate path length
 	cv::Point current = dataPoints[0];
-	int vectorLength;
+	double vectorLength = 0;
 
-	for (int i = 1; i < signLength; i++){
-
+	for (int i = 1; i < dataPoints.size(); i++){
+		vectorLength += cv::norm(dataPoints[i] - current);
+		current = dataPoints[i];
 	}
 
+	// calculate segment length
+	double segmentLength = vectorLength / 8.0;
+
+	// create new segments
+	cv::Point center = dataPoints[0];
+	cv::Point previous = dataPoints[0];
+
+	cv::vector<cv::Point> points;
+	points.push_back(center);
+
+	extrema ex(center);
+
+	int i = 1;
+	while (i < dataPoints.size()) {
+		cv::Point p1, p2;
+		cv::Point current = dataPoints[i];
+
+		int hits = intersectLineSegment(previous, current, center, segmentLength, p1, p2);
+
+		if (hits > 0) {
+			// check if point has been visited yet
+			if (find_if(points.begin(), points.end(), [&](const Point&p) {
+				return abs(p.x - p1.x) < 10 &&
+					abs(p.y - p1.y) < 10; // TODO: epsilon
+			}) == points.end()) {
+				center = p1;
+				points.push_back(center);
+
+				// update extrema
+				if (center.x < ex.minX)
+					ex.minX = center.x;
+				if (center.y < ex.minY)
+					ex.minY = center.y;
+				if (center.x > ex.maxX)
+					ex.maxX = center.x;
+				if (center.y > ex.maxY)
+					ex.maxY = center.y;
+
+				cout << center.x << " " << center.y << endl;
+
+				continue;
+			}
+		}
+
+		i++;
+		previous = current;
+	}
+
+	cout << ex.minX << " " << ex.minY << " " << ex.maxX << " " << ex.maxY << endl;
 }

@@ -19,6 +19,7 @@ public:
 	void clearOutputImage();
 
 	bool isFinished();
+	void evaluateData();
 
 protected:
 	DepthCamera *m_depthCamera;
