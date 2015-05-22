@@ -73,7 +73,7 @@ bool inSegment(Point a, Point b, Point m) {
 }
 
 
-bool intersectLineSegment(Point a, Point b, Point c, double r, Point& p1, Point& p2) {
+int intersectLineSegment(Point a, Point b, Point c, double r, Point& p1, Point& p2) {
 	int n = intersectLineCircle(a, b, c, r, p1, p2);
 	
 	if (n == 0) {

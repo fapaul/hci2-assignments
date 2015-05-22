@@ -4,7 +4,7 @@
 
 using namespace cv;
 
-int intersectLineCircle(Point a, Point b, Point c, double r, Point& p1, Point& p2);
-int intersectLineSegment(Point a, Point b, Point c, double r, Point& p1, Point& p2);
+int intersectLineCircle(Point2f a, Point2f b, Point2f c, double r, Point2f& p1, Point2f& p2);
+int intersectLineSegment(Point2f a, Point2f b, Point2f c, double r, Point2f& p1, Point2f& p2);
 
 

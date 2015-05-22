@@ -18,6 +18,7 @@
 
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/ml/ml.hpp>
 
 #include "framework/DepthCamera.h"
 #include "framework/KinectMotor.h"
@@ -27,6 +28,8 @@
 #define BRIGHTEN_FACTOR 10
 bool output = false;
 
+int numberToDisplay = -1;
+
 cv::Mat data;
 cv::Mat label;
 
@@ -35,7 +38,12 @@ using namespace std;
 cv::vector<cv::Point> dataPoints;
 void Application::processFrame()
 {
+	cv::Mat mirror, mirror2;
 
+	//cv::flip(m_bgrImage, mirror, 1);
+	//mirror.copyTo(m_bgrImage);
+	cv::flip(m_depthImage, mirror2, 0);
+	mirror2.copyTo(m_depthImage);
 
 	cv::Mat imageBase;
 	cv::Mat imageRanged;
@@ -55,12 +63,12 @@ void Application::processFrame()
 	imageBase.convertTo(imageBase, CV_8UC1, 1.0/256);
 
 	// MAGIC
-	cv::threshold(imageBase, imageBase, 7, 255, cv::THRESH_TOZERO_INV);
-	cv::threshold(imageBase, imageBase, 5, 255, cv::THRESH_BINARY);
-
+	cv::threshold(imageBase, imageBase, 15, 255, cv::THRESH_TOZERO);
 	cv::blur(imageBase, imageBase, cv::Size(7, 7));
+	//cv::threshold(imageBase, imageBase, 25, 255, cv::THRESH_BINARY);
 
-	cv::inRange(imageBase, 1, 7, imageRanged);
+
+	cv::inRange(imageBase, 1, 5, imageRanged);
 
 	cv::dilate(imageRanged, imageRanged, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(20, 20)));
 
@@ -105,7 +113,7 @@ void Application::processFrame()
 
 		// Kreis zeichnen
 		dataPoints.push_back(middle);
-		cv::circle(m_resultImage, middle, 20, cv::Scalar(255, 255, 255), -1);
+		cv::circle(m_resultImage, middle, 3, cv::Scalar(255, 255, 255), -1);
 	}
 
 	// Bild ausgeben
@@ -117,34 +125,68 @@ void Application::processFrame()
 		return;
 	}
 
+	if (numberToDisplay >= 0)
+		cv::putText(m_bgrImage, std::to_string((long long)numberToDisplay),  cv::Point(10, 50), cv::FONT_ITALIC, 1, cv::Scalar(0, 0, 0));
+
 	m_outputImage = final.clone();
 }
 
 void Application::loop()
 {
+	numberToDisplay = -1;
 	int key = cv::waitKey(20);
 	switch (key)
 	{
 	case 'q': // quit
-	m_isFinished = true;
-	break;
+		m_isFinished = true;
+		break;
 	case 's': // screenshot
-	makeScreenshots();
-	break;
+		makeScreenshots();
+		break;
 	case 'h': //enter handwrite sign
-	output = true;
-	break;
-}
-output = (key == 'h');
+		output = true;
+		break;
+	case '0':
+		numberToDisplay = 0;
+		break;
+	case '1':
+		numberToDisplay = 1;
+		break;
+	case '2':
+		numberToDisplay = 2;
+		break;
+	case '3':
+		numberToDisplay = 3;
+		break;
+	case '4':
+		numberToDisplay = 4;
+		break;
+	case '5':
+		numberToDisplay = 5;
+		break;
+	case '6':
+		numberToDisplay = 6;
+		break;
+	case '7':
+		numberToDisplay = 7;
+		break;
+	case '8':
+		numberToDisplay = 8;
+		break;
+	case '9':
+		numberToDisplay = 9;
+		break;
+	}
+	output = (key == 'h');
 
-m_depthCamera->getFrame(m_bgrImage, m_depthImage);
-processFrame();
+	m_depthCamera->getFrame(m_bgrImage, m_depthImage);
+	processFrame();
 
-cv::imshow("bgr", m_bgrImage);
-	//cv::imshow("depth", m_depthImage);
-	//cv::imshow("output", m_outputImage);
-cv::imshow("result", m_resultImage);
-cv::imshow("handwrite", m_resultSignImage);
+	cv::imshow("bgr", m_bgrImage);
+	cv::imshow("depth", m_depthImage);
+	cv::imshow("output", m_outputImage);
+	cv::imshow("result", m_resultImage);
+	cv::imshow("handwrite", m_resultSignImage);
 }
 
 void Application::makeScreenshots()
@@ -155,10 +197,12 @@ void Application::makeScreenshots()
 }
 
 Application::Application()
-: m_isFinished(false)
-, m_depthCamera(nullptr)
-, m_kinectMotor(nullptr)
+	: m_isFinished(false)
+	, m_depthCamera(nullptr)
+	, m_kinectMotor(nullptr)
 {
+	contacts.push_back(std::vector<cv::Point>());
+	set_reference_image = false;
 	// If you want to control the motor / LED
 	// m_kinectMotor = new KinectMotor;
 	readDataSet("pendigits.tra", 3000, data, label);
@@ -203,49 +247,57 @@ public:
 	}
 };
 
-void Application::evaluateData(){
-	// Test dataset
-	dataPoints = cv::vector<cv::Point>();
-	dataPoints.push_back(cv::Point(145, 135));
-	dataPoints.push_back(cv::Point(254, 87));
-	dataPoints.push_back(cv::Point(390, 86));
-	dataPoints.push_back(cv::Point(474, 201));
-	dataPoints.push_back(cv::Point(236, 363));
-	dataPoints.push_back(cv::Point(491, 379));
+void Application::evaluateData(){;
+// Test dataset
+//dataPoints = cv::vector<cv::Point>();
+//dataPoints.push_back(cv::Point(0, 94));
+//dataPoints.push_back(cv::Point(53, 100));
+//dataPoints.push_back(cv::Point(94, 77));
+//dataPoints.push_back(cv::Point(79, 37));
+//dataPoints.push_back(cv::Point(53, 0));
+//dataPoints.push_back(cv::Point(37, 1));
+//dataPoints.push_back(cv::Point(50, 40));
+//dataPoints.push_back(cv::Point(100, 57));
 
-	// calculate path length
-	cv::Point current = dataPoints[0];
-	double vectorLength = 0;
+// calculate path length
+cv::Point current = dataPoints[0];
+double vectorLength = 0;
 
-	for (int i = 1; i < dataPoints.size(); i++){
-		vectorLength += cv::norm(dataPoints[i] - current);
-		current = dataPoints[i];
-	}
+for (int i = 1; i < dataPoints.size(); i++){
+	vectorLength += cv::norm(dataPoints[i] - current);
+	current = dataPoints[i];
+}
 
-	// calculate segment length
-	double segmentLength = vectorLength / 8.0;
+// calculate segment length
+double segmentLength = vectorLength / 8.0;
 
-	// create new segments
-	cv::Point center = dataPoints[0];
-	cv::Point previous = dataPoints[0];
+// create new segments
+cv::Point center = dataPoints[0];
+cv::Point previous = dataPoints[0];
 
-	cv::vector<cv::Point> points;
+cv::vector<cv::Point> points;
+
+//if (dataPoints.size() == 8) {
+//	points = dataPoints;
+//} else {
 	points.push_back(center);
 
 	extrema ex(center);
 
 	int i = 1;
 	while (i < dataPoints.size()) {
-		cv::Point p1, p2;
+		cv::Point2f p1, p2;
 		cv::Point current = dataPoints[i];
+
+		cout << "i " << i << endl;
 
 		int hits = intersectLineSegment(previous, current, center, segmentLength, p1, p2);
 
 		if (hits > 0) {
 			// check if point has been visited yet
 			if (find_if(points.begin(), points.end(), [&](const Point&p) {
-				return abs(p.x - p1.x) < 10 &&
-					abs(p.y - p1.y) < 10; // TODO: epsilon
+				return abs(p.x - p1.x) < 2 &&
+					abs(p.y - p1.y) < 2; // TODO: epsilon
 			}) == points.end()) {
 				center = p1;
 				points.push_back(center);
@@ -263,12 +315,81 @@ void Application::evaluateData(){
 				cout << center.x << " " << center.y << endl;
 
 				continue;
+			} else if (hits > 1 && find_if(points.begin(), points.end(), [&](const Point&p) {
+				return abs(p.x - p2.x) < 2 &&
+					abs(p.y - p2.y) < 2; // TODO: epsilon
+			}) == points.end()) {
+				center = p2;
+				points.push_back(center);
+
+				// update extrema
+				if (center.x < ex.minX)
+					ex.minX = center.x;
+				if (center.y < ex.minY)
+					ex.minY = center.y;
+				if (center.x > ex.maxX)
+					ex.maxX = center.x;
+				if (center.y > ex.maxY)
+					ex.maxY = center.y;
+
+				cout << center.x << " " << center.y << endl;
+
+				continue;
 			}
+
 		}
+
 
 		i++;
 		previous = current;
 	}
 
+	center = dataPoints[dataPoints.size()-1];
+	if (points.size() == 8)
+		points[points.size()-1] = center;
+	else
+		points.push_back(center);
+	// update extrema
+	if (center.x < ex.minX)
+		ex.minX = center.x;
+	if (center.y < ex.minY)
+		ex.minY = center.y;
+	if (center.x > ex.maxX)
+		ex.maxX = center.x;
+	if (center.y > ex.maxY)
+		ex.maxY = center.y;
+
 	cout << ex.minX << " " << ex.minY << " " << ex.maxX << " " << ex.maxY << endl;
+
+	// 0...100
+	/*for (int p = 0; p < 8; p++) {
+		points[p].x -= ex.minX;
+		points[p].y -= ex.minY;
+
+		points[p].x = points[p].x / (ex.maxX / 100.0);
+		points[p].y = points[p].y / (ex.maxY / 100.0);
+	}
+//}
+
+float minScore = 9999999999;
+int minIndex = 0;
+
+for (int r = 0; r < data.rows; r++) {
+	float score = 0;
+	for (int x = 0; x < 8; x++) {
+		float dx = abs(points[x].x - data.at<float>(r, x*2)*100);
+		float dy = abs(points[x].y - data.at<float>(r, x*2+1)*100);
+
+		score += sqrt(dx*dx+dy*dy);
+	}
+
+	if (score < minScore) {
+		minScore = score;
+		minIndex = r;
+	}
+}
+
+int l = label.at<float>(minIndex);
+
+cout << l << endl;*/
 }

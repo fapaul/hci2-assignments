@@ -51,3 +51,10 @@ screenshots/
 # Kram
 Thumbs.db
 *.sdf
+
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+
+unity

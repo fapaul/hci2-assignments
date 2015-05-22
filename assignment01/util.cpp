@@ -1,4 +1,5 @@
 #include "util.h"
+#include <iostream>
 
 #define EQ(a, b) (abs((a)-(b)) < 0.00001)
 
@@ -6,7 +7,7 @@ inline int sgn(double x) {
 	return (x < 0) ? -1 : 1;
 }
 
-int intersectLineCircle(Point a, Point b, Point c, double r, Point& p1, Point& p2) {
+int intersectLineCircle(Point2f a, Point2f b, Point2f c, double r, Point2f& p1, Point2f& p2) {
 	// translate circle to (0|0)
 	double ax = a.x - c.x;
 	double ay = a.y - c.y;
@@ -45,7 +46,7 @@ int intersectLineCircle(Point a, Point b, Point c, double r, Point& p1, Point& p
 }
 
 
-bool inSegment(Point a, Point b, Point c) {
+bool inSegment(Point2f a, Point2f b, Point2f c) {
 	/*double cross = (c.y - a.y) * (b.x - a.x) - (c.x - a.x) * (b.y - a.y);
 	if (abs(cross) > 0.1) return false;
 
@@ -57,24 +58,27 @@ bool inSegment(Point a, Point b, Point c) {
 
 	return true;*/
 
-	return (min(a.x, b.x) <= c.x && c.x <= max(a.x, b.x)) &&
-		(min(a.y, b.y) <= c.y && c.y <= max(a.y, b.y));
+	return (min(a.x, b.x)-1 <= c.x && c.x <= max(a.x, b.x)+1) &&
+		(min(a.y, b.y)-1 <= c.y && c.y <= max(a.y, b.y)+1);
 }
 
 
-int intersectLineSegment(Point a, Point b, Point c, double r, Point& p1, Point& p2) {
+int intersectLineSegment(Point2f a, Point2f b, Point2f c, double r, Point2f& p1, Point2f& p2) {
 	int n = intersectLineCircle(a, b, c, r, p1, p2);
 	
 	if (n == 0) {
 		return 0;
 	}
+
+	std::cout << "DEBUG: " << p1.x << " " << p1.y << " " << p2.x << " " << p2.y << std::endl;
 	
-	Point p1a, p2a;
+	Point2f p1a, p2a;
 
 	n = 0;
 	if (inSegment(a, b, p1)) {
 		p1a = p1;
 		n++;
+		std::cout << "p1 drin" << std::endl;
 	}
 
 	if (inSegment(a, b, p2)) {
@@ -83,6 +87,7 @@ int intersectLineSegment(Point a, Point b, Point c, double r, Point& p1, Point& 
 		}
 		p2a = p2;
 		n++;
+		std::cout << "p2 drin" << std::endl;
 	}
 
 	p1 = p1a;

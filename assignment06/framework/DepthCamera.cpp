@@ -21,7 +21,6 @@ const XnMapOutputMode DepthCamera::OUTPUT_MODE = {640, 480, 30};
 
 DepthCamera::DepthCamera()
 {
-	xn::EnumerationErrors errors;
 	XnStatus status = XN_STATUS_OK;
 
 	std::cout << "Initialize OpenNI context...";
@@ -33,17 +32,16 @@ DepthCamera::DepthCamera()
 	query.AddSupportedMapOutputMode(OUTPUT_MODE);
 	query.AddSupportedCapability(XN_CAPABILITY_MIRROR);
 	
-	std::cout << "Create image generator...";
+	std::cout << "Create bgr image generator...";
 	status = m_imageGenerator.Create(m_context, &query);
-	if (status != XN_STATUS_OK)
-		throw DepthCameraException("No image generator found", status);
+	if (status != XN_STATUS_OK) throw DepthCameraException("No image generator found", status);
 	status = m_imageGenerator.SetMapOutputMode(OUTPUT_MODE);
 	status = m_imageGenerator.GetMirrorCap().SetMirror(true);
 	std::cout << " done." << std::endl;
 
 	
 	query.AddSupportedCapability(XN_CAPABILITY_ALTERNATIVE_VIEW_POINT);
-	std::cout << "Create depth generator...";
+	std::cout << "Create depth image generator...";
 	status = m_depthGenerator.Create(m_context, &query);
 	if (status != XN_STATUS_OK) throw DepthCameraException("No depth generator found", status);
 	status = m_depthGenerator.SetMapOutputMode(OUTPUT_MODE);
@@ -51,10 +49,10 @@ DepthCamera::DepthCamera()
 	m_depthGenerator.GetAlternativeViewPointCap().SetViewPoint(m_imageGenerator);
 	std::cout << " done." << std::endl;
 
-	std::cout << "Start generators...";
+	std::cout << "Start image generators...";
 	status = m_context.StartGeneratingAll();
 
-	if (status != XN_STATUS_OK) throw DepthCameraException("Starting generators failed", status);
+	if (status != XN_STATUS_OK) throw DepthCameraException("Starting image generators failed", status);
 	std::cout << " done." << std::endl;
 }
 
