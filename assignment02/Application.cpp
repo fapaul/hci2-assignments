@@ -181,13 +181,13 @@ Application::Application()
 	m_outputImage = cv::Mat(480, 640, CV_8UC1);
 	m_gameImage = cv::Mat(480, 480, CV_8UC3);
 
-	if(uist_server == "127.0.0.1") {
+	//if(uist_server == "127.0.0.1") {
 		m_gameServer = new GameServer;
 		m_gameClient = new GameClient;
 		m_gameServer->run();
 		m_gameServer->loadGame(uist_level);
 		boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-	}
+	//}
 	m_gameClient->run();
 	m_gameClient->connectToServer(uist_server);
 	std::cout << "[Info] Connected to " << uist_server << std::endl;

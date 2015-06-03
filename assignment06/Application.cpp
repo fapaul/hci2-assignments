@@ -33,43 +33,112 @@
 const int Application::uist_level = 1;
 const char* Application::uist_server = "127.0.0.1";
 
+using namespace cv;
+using namespace std;
+
+Mat background;
+Mat ausgabe;
+int selectedPlayer = -1;
+
+#define INVERT(x) (cv::Scalar::all(255) - (x))
+
 void Application::warpImage()
 {
-	///////////////////////////////////////////////////////////////////////////
-	//
-	// To do:
-	//
-	// In this method, you have to warp the image in order to project it on
-	// the floor so that it appears undistorted
-	//
-	// * m_outputImage: The image you have to distort in a way that it appears
-	//                  undistorted on the floor
-	// * m_calibration: The calibration class giving you access to the matrices
-	//                  you have computed
-	//
-	///////////////////////////////////////////////////////////////////////////
+	Mat homography = m_calibration->projectorToPhysical();
+
+	flip(m_gameImage, m_gameImage, 1);
+
+	warpPerspective(
+		m_gameImage,
+		m_outputImage,
+		homography,
+		Size(m_outputImage.cols, m_outputImage.rows),
+		INTER_NEAREST);
+
 }
+
+Point last;
 
 void Application::processFrame()
 {	
-	///////////////////////////////////////////////////////////////////////////
-	//
-	// To do:
-	//
-	// This method will be called every frame of the camera. Insert code here in
-	// order to recognize touch and select the according game units.
-	// These images will help you doing so:
-	//
-	// * m_bgrImage: The image of the Kinect's color camera
-	// * m_depthImage: The image of the Kinects's depth sensor
-	// * m_gameImage: The undistorted image in which the UIST game is rendered.
-	// * m_outputImage: The final image distorted in a way that it appears
-	//                  undistorted on the floor.
-	//
-	///////////////////////////////////////////////////////////////////////////
+	Mat temp;
+	absdiff(background, m_depthImage, temp);
 
-	// Sample code brightening up the depth image to make the values visible
-	m_depthImage *= 10;
+	temp *= 10;
+	flip(temp, temp, 1);
+
+	temp.convertTo(temp, CV_8UC1, 1.0 / 256);
+
+	threshold(temp, temp, 3, 255, THRESH_TOZERO_INV);
+	erode(temp, temp, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(20, 20)));
+	dilate(temp, temp, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(20, 20)));
+
+	vector<vector<Point>> conts;
+	Mat temp2 = temp.clone();
+	findContours(temp2, conts, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
+
+	for (int i = 0; i< conts.size(); i++)
+	{
+		Scalar color = Scalar(255, 255, 255);
+		drawContours(temp, conts, i, color, 2, 8);
+	}
+
+	if (conts.size() > 0) {
+		vector<Point> c = conts.at(0);
+
+		RotatedRect r = fitEllipse(c);
+
+		Matx33f m = m_calibration->physicalToCamera();
+		Point3f touch = m * Point3f(r.center.x, r.center.y, 1);
+		Point touch2(touch.x / touch.z, touch.y / touch.z);
+		circle(m_gameImage, touch2, 10, Scalar(0, 0, 255), 3);
+
+		GameUnitPtr player;
+
+		int old = selectedPlayer;
+
+		Point d = last - touch2;
+		if (selectedPlayer >= 0 && sqrt(d.x*d.x + d.y*d.y) < 50) {
+			// DAS MUSS SO
+		}
+		else {
+			selectedPlayer = -1;
+			for (int i = 0; i < 5; i++) {
+				GameUnitPtr p = m_gameClient->game()->unitByIndex(i);
+
+				Point pos = touch2 - p->position();
+				float diff = sqrt(pos.x*pos.x + pos.y*pos.y);
+				
+				if (diff < 30) {
+					circle(m_gameImage, p->position(), 10, Scalar(255, 0, 255), 3);
+					last = p->position();
+					selectedPlayer = i;
+					cout << "FOUND " << i << endl;
+					break;
+				}
+			}
+
+			if (selectedPlayer < 0) {
+				cout << "NOTHING" << endl;
+			}
+
+			if (selectedPlayer < 0 && old >= 0) {
+				cout << "MOVE " << old << endl;
+				Point oldPos = m_gameClient->game()->unitByIndex(old)->position();
+
+				Point delta = touch2 - oldPos;
+
+				float angle = atan2(-delta.y, delta.x);
+				m_gameClient->game()->moveUnit(old, angle, 1);
+
+			}
+		}
+	}
+
+
+	ausgabe = temp.clone();
+
+	warpImage();
 }
 
 void Application::processSkeleton(XnUserID userId)
@@ -110,6 +179,7 @@ void Application::loop()
 			m_depthCamera->getFrame(m_bgrImage, m_depthImage);
 		}
 		m_calibration->loop(m_bgrImage, m_depthImage);
+		background = m_depthImage.clone();
 
 		return;
 	}
@@ -129,34 +199,34 @@ void Application::loop()
 		break;
 	// Move fist (0) game unit with wasd
 	case 'w': // north
-		if(m_gameClient && m_gameClient->game())
-			m_gameClient->game()->moveUnit(0, (float)M_PI_2, 1.f);
+		if (m_gameClient && m_gameClient->game() && selectedPlayer > 0)
+			m_gameClient->game()->moveUnit(selectedPlayer, (float)M_PI_2, 1.f);
 		break;
 	case 'a': // west
-		if(m_gameClient && m_gameClient->game())
-			m_gameClient->game()->moveUnit(0, (float)M_PI, 1.f);
+		if (m_gameClient && m_gameClient->game() && selectedPlayer > 0)
+			m_gameClient->game()->moveUnit(selectedPlayer, (float)M_PI, 1.f);
 		break;
 	case 's': // south
-		if(m_gameClient && m_gameClient->game())
-			m_gameClient->game()->moveUnit(0, 3 * (float)M_PI_2, 1.f);
+		if (m_gameClient && m_gameClient->game() && selectedPlayer > 0)
+			m_gameClient->game()->moveUnit(selectedPlayer, 3 * (float)M_PI_2, 1.f);
 		break;
 	case 'd': // east
-		if(m_gameClient && m_gameClient->game())
-			m_gameClient->game()->moveUnit(0, 0.f, 1.f);
+		if (m_gameClient && m_gameClient->game() && selectedPlayer > 0)
+			m_gameClient->game()->moveUnit(selectedPlayer, 0.f, 1.f);
 		break;
 	// stop the first (0) game unit
 	case ' ':
-		if(m_gameClient && m_gameClient->game())
-			m_gameClient->game()->moveUnit(0, 0.f, 0.f);
+		if (m_gameClient && m_gameClient->game() && selectedPlayer > 0)
+			m_gameClient->game()->moveUnit(selectedPlayer, 0.f, 0.f);
 		break;
 	// highlight the first (0) game unit
 	case 'h':
-		if(m_gameClient && m_gameClient->game())
-			m_gameClient->game()->highlightUnit(0, true);
+		if (m_gameClient && m_gameClient->game() && selectedPlayer > 0)
+			m_gameClient->game()->highlightUnit(selectedPlayer, true);
 		break;
 	case 'u':
-		if(m_gameClient && m_gameClient->game())
-			m_gameClient->game()->highlightUnit(0, false);
+		if (m_gameClient && m_gameClient->game() && selectedPlayer > 0)
+			m_gameClient->game()->highlightUnit(selectedPlayer, false);
 		break;
 	}
 	
@@ -178,10 +248,21 @@ void Application::loop()
 			processSkeleton(*i);
 	}
 
+
+	if (selectedPlayer >= 0) {
+		GameUnitPtr p = m_gameClient->game()->unitByIndex(selectedPlayer);
+		//circle(m_gameImage, p->position(), 10, Scalar(255, 0, 255), 3);
+		for (int i = 0; i < 5; i++) {
+			m_gameClient->game()->highlightUnit(i, (i == selectedPlayer));
+		}
+
+	}
+
 	cv::imshow("bgr", m_bgrImage);
 	cv::imshow("depth", m_depthImage);
 	cv::imshow("output", m_outputImage);
 	cv::imshow("UIST game", m_gameImage);
+	cv::imshow("AUSGABE", ausgabe);
 }
 
 void Application::makeScreenshots()
@@ -205,27 +286,29 @@ Application::Application()
 
 	// Not used for UIST game demo, uncomment for skeleton assignment
 	m_depthCamera = new DepthCamera;
-	// m_skeletonTracker = new SkeletonTracker(m_depthCamera);
+	//m_skeletonTracker = new SkeletonTracker(m_depthCamera);
 
 	// open windows
 	cv::namedWindow("output", CV_WINDOW_NORMAL);
 	cv::namedWindow("depth", CV_WINDOW_AUTOSIZE);
 	cv::namedWindow("bgr", CV_WINDOW_AUTOSIZE);
 	cv::namedWindow("UIST game", CV_WINDOW_AUTOSIZE);
+	cv::namedWindow("AUSGABE", CV_WINDOW_AUTOSIZE);
 
 	// create work buffer
 	m_bgrImage = cv::Mat(480, 640, CV_8UC3);
 	m_depthImage = cv::Mat(480, 640, CV_16UC1);
 	m_outputImage = cv::Mat(480, 640, CV_8UC1);
 	m_gameImage = cv::Mat(480, 480, CV_8UC3);
+	ausgabe = cv::Mat(480, 480, CV_8UC3);
 
-	if(uist_server == "127.0.0.1") {
+//	if(uist_server == "127.0.0.1") {
 		m_gameServer = new GameServer;
 		m_gameClient = new GameClient;
 		m_gameServer->run();
 		m_gameServer->loadGame(uist_level);
 		boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-	}
+//	}
 	m_gameClient->run();
 	m_gameClient->connectToServer(uist_server);
 	std::cout << "[Info] Connected to " << uist_server << std::endl;

@@ -2,9 +2,15 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 
 #include <iostream>
 
+using namespace cv;
+
+
+#define W 102
+#define H 136
 
 void Calibration::computeHomography()
 {
@@ -28,6 +34,33 @@ void Calibration::computeHomography()
 	// * m_cameraToPhysical
 	//
 	///////////////////////////////////////////////////////////////////////////
+
+
+	vector<Point2f> points;
+	points.push_back(Point2f(230 + W, 180 + H));
+	points.push_back(Point2f(230, 180 + H));
+	points.push_back(Point2f(230, 180 + 0));
+	points.push_back(Point2f(230 + W, 180 + 0));
+
+#if !_DEBUG
+	m_projectorCoordinates = vector<Point2f>();
+	m_projectorCoordinates.push_back(Point2f(150, 362));
+	m_projectorCoordinates.push_back(Point2f(400, 362));
+	m_projectorCoordinates.push_back(Point2f(400, 100));
+	m_projectorCoordinates.push_back(Point2f(150, 100));
+
+	m_cameraCoordinates = vector<Point2f>();
+	m_cameraCoordinates.push_back(Point2f(455, 235));
+	m_cameraCoordinates.push_back(Point2f(262, 218));
+	m_cameraCoordinates.push_back(Point2f(273, 97));
+	m_cameraCoordinates.push_back(Point2f(449, 112));
+#endif
+
+	m_physicalToProjector = getPerspectiveTransform(points, m_projectorCoordinates);
+	m_physicalToCamera = getPerspectiveTransform(points, m_cameraCoordinates);
+
+	invert(m_physicalToProjector, m_projectorToPhysical);
+	invert(m_physicalToCamera, m_cameraToPhysical);
 }
 
 void mouseCallback(int event, int x, int y, int flags, void *pointer);
@@ -85,7 +118,7 @@ void Calibration::loop(const cv::Mat &bgrImage, const cv::Mat &depthImage)
 void Calibration::calibrate(const cv::Mat &bgrImage)
 {
 	// First, calibrate the projector
-	if(!m_isProjectorCalibrated)
+	if (!m_isProjectorCalibrated)
 	{
 		calibrateProjector();
 		return;
@@ -148,7 +181,7 @@ void Calibration::handleMouseClick(int x, int y, int flags)
 		m_projectorCoordinates.push_back(cv::Point2f((float)x, (float)y));
 		m_numberOfProjectorCoordinates++;
 
-		if(m_numberOfProjectorCoordinates >= 4)
+		if (m_numberOfProjectorCoordinates >= 4)
 		{
 			m_isProjectorCalibrated = true;
 			std::cout << "Finished calibrating the projector." << std::endl;
@@ -164,7 +197,7 @@ void Calibration::handleMouseClick(int x, int y, int flags)
 		m_cameraCoordinates.push_back(cv::Point2f((float)x, (float)y));
 		m_numberOfCameraCoordinates++;
 
-		if(m_numberOfCameraCoordinates >= 4)
+		if (m_numberOfCameraCoordinates >= 4)
 		{
 			m_isCameraCalibrated = true;
 			std::cout << "Finished calibrating the camera." << std::endl;
